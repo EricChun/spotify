@@ -6,6 +6,14 @@ import pandas as pd
 from collections import Counter
 
 class Connections:
+    """
+    Creates API connections to Spotify and Spotify User.
+
+    Allows user to view their playlists, choose the playlist to filter, and
+    filter the chosen playlist.
+
+    Contains two sub-classes: Playlist and Filtered_Playlist.
+    """
     def __init__(self, client_id, client_secret, scope):
         self.client_id = client_id
         self.client_secret = client_secret
@@ -18,12 +26,22 @@ class Connections:
         self.filtered_playlist = None
 
     def set_sp(self):
+        """
+        Sets Spotify API connection.
+        """
         self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=self.client_id, client_secret=self.client_secret))
 
     def set_sp_user(self):
+        """
+        Sets Spotify User API connection.
+        """
         self.sp_user = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=self.scope, client_id=self.client_id, client_secret=self.client_secret, redirect_uri=self.redirect_uri))
 
     def get_user_playlists(self):
+        """
+        Gets a list of the user's playlists, and sets user_playlists (a list of
+        dictionaries of playlist IDs and names).
+        """
         if self.sp_user is None:
             print('sp_user not set')
         else:
@@ -36,6 +54,12 @@ class Connections:
                 self.user_playlists.append(d)
 
     def choose_playlist(self):
+        """
+        Prints each playlist in user_playlists, and allows user to pick the
+        playlist on which to filter.
+
+        Initiates a Playlist object.
+        """
         if len(self.user_playlists) == 0:
             print('no playlists yet')
         else:
@@ -50,12 +74,8 @@ class Connections:
 
     def filter_playlist(self):
         """
-        Returns filtered_tracks, a dataframe of tracks filtered to genres of interest
-
-        :param tracks: dataframe
-            tracks data
-        :param genres: list
-            list of genres on which to filter
+        Initiates a Filtered_Playlist object with tracks filtered by chosen
+        filter(s).
         """
         if self.playlist.filtered_tracks is None:
             print('no filtered playlist to create')
@@ -63,6 +83,17 @@ class Connections:
             self.filtered_playlist = self.Filtered_Playlist(self.playlist.filtered_tracks, self.playlist.name, self.playlist.filter, self.user_playlists, self.sp_user)
 
     class Playlist:
+        """
+        A class to keep track of...
+            tracks/albums/artists
+            their genres
+            counts of tracks by genre/word
+            user's chosen filters
+            filtered tracks
+
+        Allows user to view counts of tracks in the playlist by genre/word, and
+        choose a filter - genre(s)/word(s) - on which to filter the playlist.
+        """
         def __init__(self, id, name, sp):
             self.id = id
             self.name = name
@@ -99,7 +130,7 @@ class Connections:
 
         def set_raw_dict(self):
             """
-            Returns a dictionary containing 3 items (tracks, albums, and artists) from a playlist.
+            Sets tracks, albums, and artists.
             Each item is a list of dictionaries - each being its own track, album, or artist.
 
             !!! could look into making this more simple/modular and/or using a better/separate deduping method
@@ -210,6 +241,9 @@ class Connections:
                     writer.writerows(li_dict)
 
         def set_raws(self):
+            """
+            Sets raw_tracks, raw_albums, and raw_artists from CSVs.
+            """
             self.raw_tracks = pd.read_csv('{}.csv'.format(self.file_names['tracks']))
             self.raw_albums = pd.read_csv('{}.csv'.format(self.file_names['albums']))
             self.raw_artists = pd.read_csv('{}.csv'.format(self.file_names['artists']))
@@ -230,6 +264,12 @@ class Connections:
             self.fact_tracks.columns = [x.replace('_track', '') for x in self.fact_tracks.columns]
 
         def set_counts(self):
+            """
+            Sets genre_counts and word_counts, counts of tracks by genre and
+            words, respectively.
+
+            Uses Counter.
+            """
             tracks = self.fact_tracks.copy()
             tracks['genres'].fillna('', inplace=True)
             # convert string of genres for each row into lists, then create a list of each row's list, and then flatten
@@ -260,12 +300,17 @@ class Connections:
                     quit = 1
 
         def choose_filter_type(self):
+            """
+            Allows user to choose the type of filter: genre(s) or word(s).
+
+            Sets filter_type.
+            """
             # ask user if they want to filter by genres or words
             self.filter_type = int(input('Filter by genres or words? Enter 0 for genres; 1 for words: '))
 
         def set_filter(self):
             """
-            Sets the list of user's chosen filters.
+            Sets filter, the list of user's chosen filters.
             """
             choices = input('Enter indexes of genres you want (separated by commas): ').replace(' ', '').split(',')
             # set genre(s) filter list
@@ -288,6 +333,13 @@ class Connections:
 
     class Filtered_Playlist:
         def __init__(self, filtered_tracks, orig_name, filter, user_playlists, sp_user):
+            """
+            A class to keep track of...
+                filtered tracks
+                name of the playlist
+
+            Allows user to create or replace the filtered playlist in Spotify.
+            """
             self.filtered_tracks = filtered_tracks
             self.orig_name = orig_name
             self.filter = filter
