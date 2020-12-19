@@ -1,2 +1,2 @@
-# spotify_filter_playlist
+# spotify
 Filter a user's playlist by genre(s)/word(s)
